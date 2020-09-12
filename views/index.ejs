@@ -1,0 +1,128 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <script src="showHideForm.js"></script>
+    <script src="indexFunctions.js"></script>
+    <style>
+        form {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            width: 400px;
+            border: 1px solid black;
+        }
+
+        div {
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <form id="interval-form" style="width: 200px;">
+        <label>Set interval of getting information (hours):</label>
+        <input type="text" id="interval" pattern="\d{2}||\d" required>
+        <input type="submit" value="Set">
+    </form>
+    <input type="button" value="Change interval" onclick="stopIntervalRequest()">
+
+    <form id="notify-form">
+        <label>Hours:</label>
+        <div>
+            <input type="text" id="startHour" pattern="\d{2}||\d" placeholder="start hour" required>
+            <input type="text" id="endHour" pattern="\d{2}||\d" placeholder="end hour" required>
+        </div>
+
+        <label>Wind Gust (m/s):</label>
+        <div>
+            <input type="text" id="startWINDGUST" pattern="\d||\d{2}" placeholder="start wind gust" required>
+            <input type="text" id="endWINDGUST" pattern="\d||\d{2}" placeholder="end wind gust" required>
+        </div>
+
+        <label>Wind Speed (m/s):</label>
+        <div>
+            <input type="text" id="startWINDSPD" pattern="\d||\d{2}" placeholder="start wind speed" required>
+            <input type="text" id="endWINDSPD" pattern="\d||\d{2}" placeholder="end wind speed" required>
+        </div>
+
+        <label>Wind Dir (°):</label>
+        <div>
+            <input type="text" id="startWINDDIR" pattern="\d||\d{2}||\d{3}" placeholder="start wind direction" required>
+            <input type="text" id="endWINDDIR" pattern="\d||\d{2}||\d{3}" placeholder="end wind direction" required>
+        </div>
+
+        <label>Temperature (°C):</label>
+        <div>
+            <input type="text" id="startTMPE" pattern="\d||\d{2}" placeholder="start temperature" required>
+            <input type="text" id="endTMPE" pattern="\d||\d{2}" placeholder="end temperature" required>
+        </div>
+
+        <label>Rainfall (mm/3h):</label>
+        <div>
+            <input type="text" id="startRainfall" pattern="\d||\d{2}" placeholder="start rainfall" required>
+            <input type="text" id="endRainfall" pattern="\d||\d{2}" placeholder="end rainfall" required>
+        </div>
+
+        <label>Reciever(s):</label>
+        <div>
+            <textarea id="reciever" cols="30" rows="4" required></textarea>
+            <input type="submit" value="Notify">
+        </div>
+    </form>
+
+    <input type="button" onclick="showFindForm()" value="Change find properties" id="show-form">
+
+    <table id="table"></table>
+    <h3 id="last-request-time"></h3>
+    <table id="matched-table"></table>
+
+    <script>
+        //initial request
+        $("#notify-form").on("submit", (e) => {
+            e.preventDefault();
+            hideFindForm();
+            $.get({
+                url: "https://www.windguru.cz/int/iapi.php?q=forecast&id_model=" + id_model + "&initstr=" + initstr + "&id_spot=87721",
+                dataType: 'jsonp',
+                success: function (data) {
+                    let find_data = find(data.fcst);
+                    if (localStorage.getItem("data") !== find_data) {
+                        if (find(data.fcst).length > 0) {
+                            let matched_table = createTableOfMatchedElements(find_data);
+                            document.getElementById('matched-table').innerHTML = matched_table; // filling out table
+                            localStorage.setItem("data", JSON.stringify(find_data));
+                            sendMail(matched_table); // send notifycation
+
+                            document.getElementById("last-request-time").innerText = "Last request: " + new Date().toLocaleDateString() + "  " + new Date().toLocaleTimeString();
+                        }
+                    }
+                },
+                error: function () {
+                    alert("Error");
+                }
+            });
+        });
+
+        $("#interval-form").on("submit", (e) => {
+            e.preventDefault();
+            startIntervalRequest();
+        });
+
+        $.get({
+            url: "https://www.windguru.cz/int/iapi.php?q=forecast&id_model=" + id_model + "&initstr=" + initstr + "&id_spot=87721",
+            dataType: 'jsonp',
+            success: function (data) {
+                document.getElementById("table").innerHTML = tableHead + createWeatherTableBody(data.fcst);
+            },
+            error: function () {
+                alert("Error");
+            }
+        });
+    </script>
+</body>
+
+</html>
